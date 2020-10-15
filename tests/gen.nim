@@ -2828,6 +2828,9 @@ proc get$1*(builder: Builder; name: string): $1 =
     #output.writeLine("\nproc g_type_get_type*(): GType = g_type_from_name(\"GType\")")
     output.writeLine("\nproc g_variant_get_type*(): GType = g_type_from_name(\"GVariant\")")
 
+  if namespace == "Nice":
+    output.write("include niceimpl\n")
+
   var arrayTypes: string = "type\n"
   arrayCollector.excl("cstringArray")
   arrayCollector.excl("ValueArray")
@@ -2911,6 +2914,7 @@ proc launch() =
     main("Gst")
     main("Handy")
     main("cairo")
+    main("Nice")
   else:
     echo "First we try generating bindings for GTK4, this may fail when GTK4 is not properly installed"
     echo "on your computer. But don't worry, you can still use GTK3"
@@ -2939,6 +2943,7 @@ proc launch() =
     main("Gst")
     # main("Handy") # not yet available for GTK4
     main("cairo")
+    main("Nice")
 
   if ISGTK3:
     supmod3.writeLine("  ]")
