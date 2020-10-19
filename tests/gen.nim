@@ -2709,6 +2709,30 @@ proc nice_agent_attach_recv*(self: ptr Object00; streamID: cuint; componentID: c
 proc attachRecv*(self: Agent; streamID: int; componentID: int; ctx: MainContext; fn: AgentRecvFunc; data: pointer): bool =
   toBool(nice_agent_attach_recv(self.impl, streamID.cuint, componentID.cuint,  ctx.impl, fn, data))
 
+when defined(windows):
+  import winlean
+else:
+  import posix
+
+type
+  # See https://gitlab.freedesktop.org/libnice/libnice/-/blob/master/agent/address.h
+  NiceAddress* {.union.} = object
+    `addr`*: SockAddr
+    ip4*: Sockaddr_in
+    ip6*: Sockaddr_in6
+
+  # See https://gitlab.freedesktop.org/libnice/libnice/-/blob/master/agent/candidate.h
+  NiceCandidate* {.pure.} = object
+    `type`*: CandidateType
+    transport*: CandidateTransport
+    `addr`*: NiceAddress
+    baseAddr*: NiceAddress
+    priority*: uint32
+    streamId*: uint32
+    componentId*: uint32
+    foundation*: array[0 .. (CANDIDATE_MAX_FOUNDATION.int - 1), char]
+    username*: cstring
+    password*: cstring
 """
 
 const GLib_EPI = """
@@ -2719,7 +2743,6 @@ when not declared(g_thread_new):
   proc newThread*(name: string; fn: ThreadFunc; data:pointer): Thread =
     fnew(result, finalizerunref)
     result.impl = g_thread_new(name, fn, data)
-
 """
 
 const GTK3_EPI = """
