@@ -62,7 +62,7 @@ proc prep =
   exec("nim c gen.nim")
   mkDir("nim_gi")
   exec(td / wd / "gen 1")
-#  exec(td / wd / "gen")
+  exec(td / wd / "gen")
   let mods = listFiles("nim_gi")
   for i in mods:
     let j = i[7 .. ^1]

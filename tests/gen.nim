@@ -3954,7 +3954,7 @@ proc launch() =
 
   if ISGTK3:
     echo "Generating bindings for GTK3..."
-    main("Gtk", "3.0") # the 3 new 4.0 releases in old version
+#    main("Gtk", "3.0") # the 3 new 4.0 releases in old version
     main("Gdk", "3.0")
     main("GdkX11", "3.0")
     # main("Gsk") # not available for GTK3
