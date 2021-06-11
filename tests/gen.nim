@@ -1,7 +1,7 @@
-# High level gobject-introspection based GTK3/GTK4 bindings for the Nim programming language
+# High level gobject-introspection based GTK4/GTK3 bindings for the Nim programming language
 # nimpretty --maxLineLen:130 gen.nim
-# v 0.8.9 2021-MAR-16
-# (c) S. Salewski 2018
+# v 0.9.0 2021-JUN-01
+# (c) S. Salewski 2018, 2019, 2020, 2021
 
 # usefull for finding death code:
 # https://forum.nim-lang.org/t/5898
@@ -95,6 +95,29 @@ int int8 int16 int32 int64 uint uint8 uint16 uint32 uint64 float float32 float64
 import dynlib
 
 type
+  AdwInit = proc (argc: ptr cint; argv: ptr ptr cstring) {.cdecl.}
+
+proc tryInitAdw(): LibHandle =
+  # echo "Try to init gst"
+  when defined(windows):
+    const AdwLibName = "adwaita-1-0.dll"
+  elif defined(macosx):
+    const AdwLibName = "libadwaita-1.dylib"
+  else:
+    const AdwLibName = "libadwaita-1.so(|.0)"
+  let adwLib = loadLibPattern(AdwLibName) # dlopen
+  if adwLib != nil:
+    let adwInit = cast[AdwInit](adwLib.symAddr("adw_init"))
+    if adwInit != nil:
+      adwInit(nil, nil)
+    else:
+      echo "Can't init adw library!"
+  else:
+    echo "Can't load adw library!"
+  return adwLib
+  # unloadLib(adwLib)
+
+type
   GstInit = proc (argc: ptr cint; argv: ptr ptr cstring) {.cdecl.}
 
 proc tryInitGst(): LibHandle =
@@ -116,6 +139,9 @@ proc tryInitGst(): LibHandle =
     echo "Can't load gst library!"
   return gstLib
   # unloadLib(gstLib)
+
+
+
 
 type
   Gtk3Init = proc (argc: ptr cint; argv: ptr ptr cstring) {.cdecl.}
@@ -1485,7 +1511,8 @@ proc writeMethod(info: GIBaseInfo; minfo: GIFunctionInfo) =
           if gArgInfoGetDirection(arg) == GIDirection.OUT:
             isGObject = true
 
-      if ((gFunctionInfoGetFlags(mInfo).int and GIFunctionInfoFlags.IS_CONSTRUCTOR.int) == 0):
+      if true: # https://discourse.gnome.org/t/gtk-no-selection-new/6576
+      #if ((gFunctionInfoGetFlags(mInfo).int and GIFunctionInfoFlags.IS_CONSTRUCTOR.int) == 0):
         if gArgInfoGetDirection(arg) == GIDirection.IN and gArgInfoGetOwnershipTransfer(arg) == GITransfer.EVERYTHING and
           isProxyCandidate(t) and not callerAlloc.contains(ngrt.namePlainNS):
           # like gtk_widget_add_controller()
@@ -3215,6 +3242,10 @@ proc getRootWidget*(self: Widget): Widget =
   #g_type_check_instance_is_a(cast[ptr TypeInstance00](result.impl), gt)))
   cast[Widget](h)
 
+proc stringObject*(self: gobject.Object): StringObject =
+  assert(toBool(g_type_check_instance_is_a(cast[ptr TypeInstance00](self.impl), gtk_string_object_get_type())))
+  cast[StringObject](self)
+
 """
 
 const GDK4_EPI = """
@@ -3288,6 +3319,7 @@ import macros, strutils
 
 var
   gstLib: LibHandle
+  adwLib: LibHandle
   gtk3Lib: LibHandle
   gtk4Lib: LibHandle
 
@@ -3324,6 +3356,9 @@ proc main(namespace: string; version: cstring = nil) =
 
   if namespace == "Gst" and gstLib == nil:
     gstLib = tryInitGst()
+
+  if namespace == "Adw" and adwLib == nil:
+    adwLib = tryInitAdw()
 
   if namespace == "Gtk" and version == "3.0" and gtk3Lib == nil:
     gtk3Lib = tryInitGtk3()
@@ -4030,6 +4065,7 @@ proc launch() =
     # main("Vte") # not yet available for GTK4
     main("Notify")
     # main("Handy") # not yet available for GTK4
+    main("Adw") # replaces libhandy for GTK4
     main("Nice")
     main("cairo")
     main("WebKit2", "5.0")
@@ -4073,6 +4109,8 @@ proc launch() =
     supmod4.close
   if gstLib != nil:
     unloadLib(gstLib)
+  if adwLib != nil:
+    unloadLib(adwLib)
   if gtk3Lib != nil:
     unloadLib(gtk3Lib)
   if gtk4Lib != nil:
@@ -4089,7 +4127,7 @@ launch()
 #  if not xcallerAlloc.contains(el):
 #    echo el
 
-# 4092 lines
+# 4130 lines
 # gtk_icon_view_get_tooltip_context bug Candidate
 # gtk_tree_view_get_cursor bug
 #
